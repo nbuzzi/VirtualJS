@@ -143,6 +143,24 @@ class VDom implements IVDom {
     }
 }
 
+//TEST para route
+class HashHandler {
+    oldHash: any;
+    Check: any;
+
+    constructor() {
+        this.oldHash = window.location.hash;
+        this.Check;
+    }
+
+    detect () : any {
+        if(this.oldHash!=window.location.hash){
+            alert("HASH CHANGED - new has" + window.location.hash);
+            this.oldHash = window.location.hash;
+        }
+    }
+}
+
 //Router
 window.onhashchange = () : void => {
     let hash = window.location.hash;
