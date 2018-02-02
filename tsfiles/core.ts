@@ -115,14 +115,24 @@ class VDom implements IVDom {
         return;
     }
 
-    public getCallback(eventName: string) : ICallback {
-        this.arrayCallbacks.forEach(e => {
-            if(e && e.domEvent == eventName){
-                return e;
+    public getCallback(eventName: string): Function {
+        for (let i in this.arrayCallbacks) {
+            if (this.arrayCallbacks[i].domEvent == eventName) {
+                return this.arrayCallbacks[i].callback[eventName] as Function;
             }
-        });
+        }
 
         return null;
+    }
+
+    public setCallback(eventName: string, func: Function): void {
+        for(let i in this.arrayCallbacks) {
+            if (this.arrayCallbacks[i].domEvent == eventName) {
+                this.arrayCallbacks[i].callback[eventName] = func;
+            }
+        }
+
+        return;
     }
 
     public body() : VDom {
@@ -163,18 +173,18 @@ class HashHandler {
 
 //Router
 window.onhashchange = () : void => {
-    let hash = window.location.hash;
+    alert(window.location.href);
 };
 
 //Ready
 document.addEventListener('DOMContentLoaded', (): void => {
 
     //Set up this document
-    let virtual = new VDom();
+    let vdom = new VDom();
 
-    virtual.getCallback('DOMNodeInserted').callback = (event: MutationEvent) => {
-        console.log("New item added", event);
-    };
-
-    virtual.body().setHtml(`<h1>TEST</h1>`);
+    vdom.setCallback('DOMNodeInserted', (event: MutationEvent): void => {
+        console.log("Agregado", event);
+    });
+    
+    vdom.body().setHtml(`<h1>TEST</h1>`);
 });

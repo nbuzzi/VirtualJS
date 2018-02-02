@@ -7,3 +7,6 @@ output/*.js.map
 
 #package unnecessary
 package-lock.json
+
+#vscode
+.vscode
