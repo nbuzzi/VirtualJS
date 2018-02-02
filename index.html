@@ -11,9 +11,30 @@
 
 <body>
 
-    <ol contenteditable oninput="">
-        <li>Press enter</li>
-    </ol>
+    <ul>
+        <li>
+            <a href="#">Home</a>
+        </li>
+        <li>
+            <a href="#/page1">Page 1</a>
+        </li>
+        <li>
+            <a href="#/page2">Page 2</a>
+        </li>
+    </ul>
+    <div id="view"></div>
+    <script>
+        route('/', 'home', function () { });
+        route('/page1', 'template1', function () {
+            this.greeting = 'Hello world!';
+            this.moreText = 'Bacon ipsum...';
+            this.counter = 0;
+            this.$on('.my-button', 'click', function () {
+                this.counter += 1;
+                this.$refresh();
+            }.bind(this));
+        });
+    </script>
 
 </body>
 

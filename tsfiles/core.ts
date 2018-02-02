@@ -126,7 +126,7 @@ class VDom implements IVDom {
     }
 
     public setCallback(eventName: string, func: Function): void {
-        for(let i in this.arrayCallbacks) {
+        for (let i in this.arrayCallbacks) {
             if (this.arrayCallbacks[i].domEvent == eventName) {
                 this.arrayCallbacks[i].callback[eventName] = func;
             }
@@ -135,17 +135,17 @@ class VDom implements IVDom {
         return;
     }
 
-    public body() : VDom {
+    public body(): VDom {
 
         let body = this.virtual.body as any;
 
-        body.setHtml = (stringTemplate: string) : void => {
+        body.setHtml = (stringTemplate: string): void => {
             body.innerHTML = stringTemplate;
 
             return;
         };
 
-        body.getHtml = () : string => {
+        body.getHtml = (): string => {
             return body.innerHTML;
         };
 
@@ -163,18 +163,149 @@ class HashHandler {
         this.Check;
     }
 
-    detect () : any {
-        if(this.oldHash!=window.location.hash){
+    detect(): any {
+        if (this.oldHash != window.location.hash) {
             alert("HASH CHANGED - new has" + window.location.hash);
             this.oldHash = window.location.hash;
         }
     }
 }
 
-//Router
-window.onhashchange = () : void => {
-    alert(window.location.href);
-};
+((): void => {
+    // A hash to store our routes:
+    let routes: any = {};
+    // An array of the current route's events:
+    let events: any = [];
+    // The element where the routes are rendered:
+    let el: any = null;
+    // Context functions shared between all controllers:
+    let ctx = {
+        on: (selector: string, evt: any, handler: any): void => {
+            events.push([selector, evt, handler]);
+        },
+        refresh: (listeners: any[]): void => {
+            listeners.forEach(function (fn) { fn(); });
+        }
+    };
+
+    // Defines a route:
+    let route = (path: string, templateId: any, controller: any): void => {
+        if (typeof templateId === 'function') {
+            controller = templateId;
+            templateId = null;
+        }
+
+        let listeners: any = [];
+        Object.defineProperty(controller.prototype, '$on', { value: ctx.on });
+        Object.defineProperty(controller.prototype, '$refresh', { value: ctx.refresh.bind(undefined, listeners) });
+
+        routes[path] = { templateId: templateId, controller: controller, onRefresh: listeners.push.bind(listeners) };
+    };
+
+    const forEachEventElement = (fnName: string): void => {
+        for (let i = 0, len = events.length; i < len; i++) {
+            let els = el.querySelectorAll(events[i][0]);
+            for (let j = 0, elsLen = els.length; j < elsLen; j++) {
+                els[j][fnName].apply(els[j], events[i].slice(1));
+            }
+        }
+    };
+
+    const addEventListeners = (): void => {
+        forEachEventElement('addEventListener');
+    };
+
+    const removeEventListeners = (): void => {
+        forEachEventElement('removeEventListener');
+    };
+
+    //Watch changes on the View
+    const calls = {
+        attribModifiedCallback: (element: HTMLElement, event: MutationEvent): void => {
+
+        },
+        attribNameChangedCallback: (element: HTMLElement, event: MutationEvent): void => {
+
+        },
+        characterDataModifiedCallback: (element: HTMLElement, event: MutationEvent): void => {
+
+        },
+        elementNameChangedCallback: (element: HTMLElement, event: MutationEvent): void => {
+
+        },
+        nodeInsertedIntoDocumentCallback: (element: HTMLElement, event: MutationEvent): void => {
+
+        },
+        nodeInsertedCallback: (element: HTMLElement, event: MutationEvent): void => {
+
+        },
+        nodeRemovedCallback: (element: HTMLElement, event: MutationEvent): void => {
+
+        },
+        removedFromDocumentCallback: (element: HTMLElement, event: MutationEvent): void => {
+
+        },
+        subtreeModifiedCallback: (element: HTMLElement, event: MutationEvent): void => {
+
+        },
+    };
+
+    let arrayCallbacks: Array<ICallback> = [{ domEvent: 'DOMAttrModified', callback: { DOMAttrModified: calls.attribModifiedCallback } },
+    { domEvent: 'DOMAttributeNameChanged', callback: { DOMAttributeNameChanged: calls.attribNameChangedCallback } },
+    { domEvent: 'DOMCharacterDataModified', callback: { DOMCharacterDataModified: calls.characterDataModifiedCallback } },
+    { domEvent: 'DOMElementNameChanged', callback: { DOMElementNameChanged: calls.elementNameChangedCallback } },
+    { domEvent: 'DOMNodeInsertedIntoDocument', callback: { DOMNodeInsertedIntoDocument: calls.nodeInsertedIntoDocumentCallback } },
+    { domEvent: 'DOMNodeInserted', callback: { DOMNodeInserted: calls.nodeInsertedCallback } },
+    { domEvent: 'DOMNodeRemoved', callback: { DOMNodeRemoved: calls.nodeRemovedCallback } },
+    { domEvent: 'DOMNodeRemovedFromDocument', callback: { DOMNodeRemovedFromDocument: calls.removedFromDocumentCallback } },
+    { domEvent: 'DOMSubtreeModified', callback: { DOMSubtreeModified: calls.subtreeModifiedCallback } }];
+
+    const tmpl = (str: string, data?: any): void => {
+        //aca va la logica de replace
+
+    };
+
+    let current: any = null;
+    const router = (): void => {
+        // Lazy load view element:
+        el = el || document.getElementById('view');
+        // Clear existing observer:
+        if (current) {
+            current = null;
+        }
+        // Current route url (getting rid of '#' in hash as well):
+        var url = location.hash.slice(1) || '/';
+        // Get route by url:
+        var route = routes[url];
+        // Do we have both a view and a route?
+        if (el && route.controller) {
+            // Set current route information:
+            current = {
+                controller: new route.controller,
+                template: route.templateId, //modificar acá para renderizar la vista
+                render: (): void => {
+                    // Render route template with John Resig's template engine:
+                    el.innerHTML = tmpl(route.templateId, new route.controller());
+                }
+            };
+            // Render directly:
+            current.render();
+
+            //Configure watchs
+            arrayCallbacks.forEach(event => {
+                el.addEventListener(event.domEvent, (mutationEvent: MutationObserver): void => {
+                    event.callback[event.domEvent](el, mutationEvent);
+                });
+            });
+        }
+    };
+    // Listen on hash change:
+    this.addEventListener('hashchange', router);
+    // Listen on page load:
+    this.addEventListener('load', router);
+    // Expose the route register function:
+    this.route = route;
+})();
 
 //Ready
 document.addEventListener('DOMContentLoaded', (): void => {
@@ -185,6 +316,6 @@ document.addEventListener('DOMContentLoaded', (): void => {
     vdom.setCallback('DOMNodeInserted', (event: MutationEvent): void => {
         console.log("Agregado", event);
     });
-    
+
     vdom.body().setHtml(`<h1>TEST</h1>`);
 });
