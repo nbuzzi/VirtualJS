@@ -260,9 +260,48 @@ class HashHandler {
     { domEvent: 'DOMNodeRemovedFromDocument', callback: { DOMNodeRemovedFromDocument: calls.removedFromDocumentCallback } },
     { domEvent: 'DOMSubtreeModified', callback: { DOMSubtreeModified: calls.subtreeModifiedCallback } }];
 
-    const tmpl = (str: string, data?: any): void => {
-        //aca va la logica de replace
+    const compare = (data: any): boolean => {
+        if (sessionStorage && sessionStorage.currentDocument) {
+            let obj = sessionStorage.currentDocument || {};
+            let dom = sessionStorage.currentDocument || {};
 
+            obj = JSON.parse(obj);
+            dom = JSON.parse(dom);
+
+            if(!obj || !dom) return true;
+
+            for (let src in data) {
+                if (data[src] != dom[src]) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        return true;
+    };
+
+    //Cache
+    const tmpl = (str: string, data?: any): void => {
+
+        if (compare(data)) {
+            let dom = new VDom();
+
+            let dataReplaced: any;
+
+            for (let i in data) {
+                let regExpression = new RegExp('{{' + i + '}}');
+                str = str.replace(regExpression, data[i]);
+            }
+
+            dom.body().setHtml(str);
+            sessionStorage.currentDocument = JSON.stringify({ doc: dom, obj: data });
+
+            dom.apply();
+        } else {
+            sessionStorage.currentDocument.doc.apply();
+        }
     };
 
     let current: any = null;

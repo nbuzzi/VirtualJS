@@ -19,15 +19,14 @@
             <a href="#/page1">Page 1</a>
         </li>
         <li>
-            <a href="#/page2">Page 2</a>
+            <a href="#/page/2">Page 2</a>
         </li>
     </ul>
     <div id="view"></div>
     <script>
         route('/', 'home', function () { });
-        route('/page1', 'template1', function () {
-            this.greeting = 'Hello world!';
-            this.moreText = 'Bacon ipsum...';
+        route('/page1', `<div>{{pepe}}</div>`, function () {
+            this.pepe = 'Hello world!';
             this.counter = 0;
             this.$on('.my-button', 'click', function () {
                 this.counter += 1;
