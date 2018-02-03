@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Document</title>
-    <script src="output/core.js" type="text/javascript"></script>
+    <script src="jsfiles/core.js" type="text/javascript"></script>
+    <script src="jsfiles/jLinq.js" type="text/javascript"></script>
 </head>
 
 <body>
@@ -23,18 +24,6 @@
         </li>
     </ul>
     <div id="view"></div>
-    <script>
-        route('/', 'home', function () { });
-        route('/page1', `<div>{{pepe}}</div>`, function () {
-            this.pepe = 'Hello world!';
-            this.counter = 0;
-            this.$on('.my-button', 'click', function () {
-                this.counter += 1;
-                this.$refresh();
-            }.bind(this));
-        });
-    </script>
-
 </body>
 
 </html>

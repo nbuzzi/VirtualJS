@@ -1,55 +1,28 @@
-//const MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
-const configDefault: any = { attributes: true, childList: true, characterData: true };
+/****************************************************************************************************************************************/
 
-interface ICallback {
-    domEvent: string;
-    callback: any;
-}
+/*                                                          CORE                                                                        */
+/****************************************************************************************************************************************/
+const configDefault = { attributes: true, childList: true, characterData: true };
 
-interface IVDom {
-    virtual: HTMLDocument;
-    Callbacks: ICallbacks;
-    arrayCallbacks: Array<ICallback>;
-}
-
-interface VDom {
-    setHtml: Function;
-    getHtml: Function;
-}
-
-interface ICallbacks {
-    attribModifiedCallback: Function;
-    attribNameChangedCallback: Function;
-    characterDataModifiedCallback: Function;
-    elementNameChangedCallback: Function;
-    nodeInsertedIntoDocumentCallback: Function;
-    nodeInsertedCallback: Function;
-    nodeRemovedCallback: Function;
-    removedFromDocumentCallback: Function;
-    subtreeModifiedCallback: Function;
-}
-
-const createDOM = (stringTemplate: string = `<!doctype html><html><head></head><body></body></html>`, format: string = "text/html"): HTMLDocument => {
-    let dom = new DOMParser();
-
-    return dom.parseFromString(stringTemplate, format) as HTMLDocument;
+var $$ = (query, dom = document) => {
+    return dom.querySelectorAll(query);
 };
 
-const applyDocument = (doc: HTMLDocument): void => {
+const createDOM = (stringTemplate = `<!doctype html><html><head></head><body></body></html>`, format = "text/html") => {
+    let dom = new DOMParser();
+
+    return dom.parseFromString(stringTemplate, format);
+};
+
+const applyDocument = (doc) => {
     if (doc) {
         document.body.innerHTML = doc.body.innerHTML;
     }
 };
 
-class VDom implements IVDom {
+class VDom {
 
-    private _template: string;
-    private _format: string;
-    virtual: HTMLDocument;
-    Callbacks: ICallbacks;
-    arrayCallbacks: Array<ICallback>;
-
-    constructor(public template: string = ``, public format: string = 'text/html') {
+    constructor(template = ``, format = 'text/html') {
         this._template = template;
         this._format = format;
 
@@ -57,31 +30,31 @@ class VDom implements IVDom {
 
         this.Callbacks = {
 
-            attribModifiedCallback: (event: MutationEvent): any => {
+            attribModifiedCallback: (event) => {
 
             },
-            attribNameChangedCallback: (event: MutationEvent): any => {
+            attribNameChangedCallback: (event) => {
 
             },
-            characterDataModifiedCallback: (event: MutationEvent): any => {
+            characterDataModifiedCallback: (event) => {
 
             },
-            elementNameChangedCallback: (event: MutationEvent): any => {
+            elementNameChangedCallback: (event) => {
 
             },
-            nodeInsertedIntoDocumentCallback: (event: MutationEvent): any => {
+            nodeInsertedIntoDocumentCallback: (event) => {
 
             },
-            nodeInsertedCallback: (event: MutationEvent): any => {
+            nodeInsertedCallback: (event) => {
 
             },
-            nodeRemovedCallback: (event: MutationEvent): any => {
+            nodeRemovedCallback: (event) => {
 
             },
-            removedFromDocumentCallback: (event: MutationEvent): any => {
+            removedFromDocumentCallback: (event) => {
 
             },
-            subtreeModifiedCallback: (event: MutationEvent): any => {
+            subtreeModifiedCallback: (event) => {
 
             },
         };
@@ -99,33 +72,33 @@ class VDom implements IVDom {
         this.configureCallback(this.virtual);
     }
 
-    private configureCallback(doc: HTMLDocument): void {
+    configureCallback(doc) {
         if (this.virtual) {
             this.arrayCallbacks.forEach(event => {
-                this.virtual.addEventListener((event as ICallback).domEvent, (mutationEvent: MutationEvent): void => {
-                    (event as ICallback).callback[event.domEvent](doc, mutationEvent);
+                this.virtual.addEventListener(event.domEvent, (mutationEvent) => {
+                    event.callback[event.domEvent](doc, mutationEvent);
                 });
             });
         }
     }
 
-    public apply(): void {
+    apply() {
         document.body.innerHTML = this.virtual.body.innerHTML;
 
         return;
     }
 
-    public getCallback(eventName: string): Function {
+    getCallback(eventName) {
         for (let i in this.arrayCallbacks) {
             if (this.arrayCallbacks[i].domEvent == eventName) {
-                return this.arrayCallbacks[i].callback[eventName] as Function;
+                return this.arrayCallbacks[i].callback[eventName];
             }
         }
 
         return null;
     }
 
-    public setCallback(eventName: string, func: Function): void {
+    setCallback(eventName, func) {
         for (let i in this.arrayCallbacks) {
             if (this.arrayCallbacks[i].domEvent == eventName) {
                 this.arrayCallbacks[i].callback[eventName] = func;
@@ -135,17 +108,17 @@ class VDom implements IVDom {
         return;
     }
 
-    public body(): VDom {
+    body() {
 
-        let body = this.virtual.body as any;
+        let body = this.virtual.body;
 
-        body.setHtml = (stringTemplate: string): void => {
+        body.setHtml = (stringTemplate) => {
             body.innerHTML = stringTemplate;
 
             return;
         };
 
-        body.getHtml = (): string => {
+        body.getHtml = () => {
             return body.innerHTML;
         };
 
@@ -155,15 +128,12 @@ class VDom implements IVDom {
 
 //TEST para route
 class HashHandler {
-    oldHash: any;
-    Check: any;
-
     constructor() {
         this.oldHash = window.location.hash;
         this.Check;
     }
 
-    detect(): any {
+    detect() {
         if (this.oldHash != window.location.hash) {
             alert("HASH CHANGED - new has" + window.location.hash);
             this.oldHash = window.location.hash;
@@ -171,38 +141,38 @@ class HashHandler {
     }
 }
 
-((): void => {
+(() => {
     // A hash to store our routes:
-    let routes: any = {};
+    let routes = {};
     // An array of the current route's events:
-    let events: any = [];
+    let events = [];
     // The element where the routes are rendered:
-    let el: any = null;
+    let el = null;
     // Context functions shared between all controllers:
     let ctx = {
-        on: (selector: string, evt: any, handler: any): void => {
+        on: (selector, evt, handler) => {
             events.push([selector, evt, handler]);
         },
-        refresh: (listeners: any[]): void => {
-            listeners.forEach(function (fn) { fn(); });
+        refresh: (listeners) => {
+            listeners.forEach((fn) => { fn(); });
         }
     };
 
     // Defines a route:
-    let route = (path: string, templateId: any, controller: any): void => {
+    let route = (path, templateId, controller) => {
         if (typeof templateId === 'function') {
             controller = templateId;
             templateId = null;
         }
 
-        let listeners: any = [];
+        let listeners = [];
         Object.defineProperty(controller.prototype, '$on', { value: ctx.on });
         Object.defineProperty(controller.prototype, '$refresh', { value: ctx.refresh.bind(undefined, listeners) });
 
         routes[path] = { templateId: templateId, controller: controller, onRefresh: listeners.push.bind(listeners) };
     };
 
-    const forEachEventElement = (fnName: string): void => {
+    const forEachEventElement = (fnName) => {
         for (let i = 0, len = events.length; i < len; i++) {
             let els = el.querySelectorAll(events[i][0]);
             for (let j = 0, elsLen = els.length; j < elsLen; j++) {
@@ -211,46 +181,46 @@ class HashHandler {
         }
     };
 
-    const addEventListeners = (): void => {
+    const addEventListeners = () => {
         forEachEventElement('addEventListener');
     };
 
-    const removeEventListeners = (): void => {
+    const removeEventListeners = () => {
         forEachEventElement('removeEventListener');
     };
 
     //Watch changes on the View
     const calls = {
-        attribModifiedCallback: (element: HTMLElement, event: MutationEvent): void => {
+        attribModifiedCallback: (element, event) => {
 
         },
-        attribNameChangedCallback: (element: HTMLElement, event: MutationEvent): void => {
+        attribNameChangedCallback: (element, event) => {
 
         },
-        characterDataModifiedCallback: (element: HTMLElement, event: MutationEvent): void => {
+        characterDataModifiedCallback: (element, event) => {
 
         },
-        elementNameChangedCallback: (element: HTMLElement, event: MutationEvent): void => {
+        elementNameChangedCallback: (element, event) => {
 
         },
-        nodeInsertedIntoDocumentCallback: (element: HTMLElement, event: MutationEvent): void => {
+        nodeInsertedIntoDocumentCallback: (element, event) => {
 
         },
-        nodeInsertedCallback: (element: HTMLElement, event: MutationEvent): void => {
+        nodeInsertedCallback: (element, event) => {
 
         },
-        nodeRemovedCallback: (element: HTMLElement, event: MutationEvent): void => {
+        nodeRemovedCallback: (element, event) => {
 
         },
-        removedFromDocumentCallback: (element: HTMLElement, event: MutationEvent): void => {
+        removedFromDocumentCallback: (element, event) => {
 
         },
-        subtreeModifiedCallback: (element: HTMLElement, event: MutationEvent): void => {
+        subtreeModifiedCallback: (element, event) => {
 
         },
     };
 
-    let arrayCallbacks: Array<ICallback> = [{ domEvent: 'DOMAttrModified', callback: { DOMAttrModified: calls.attribModifiedCallback } },
+    let arrayCallbacks = [{ domEvent: 'DOMAttrModified', callback: { DOMAttrModified: calls.attribModifiedCallback } },
     { domEvent: 'DOMAttributeNameChanged', callback: { DOMAttributeNameChanged: calls.attribNameChangedCallback } },
     { domEvent: 'DOMCharacterDataModified', callback: { DOMCharacterDataModified: calls.characterDataModifiedCallback } },
     { domEvent: 'DOMElementNameChanged', callback: { DOMElementNameChanged: calls.elementNameChangedCallback } },
@@ -260,7 +230,7 @@ class HashHandler {
     { domEvent: 'DOMNodeRemovedFromDocument', callback: { DOMNodeRemovedFromDocument: calls.removedFromDocumentCallback } },
     { domEvent: 'DOMSubtreeModified', callback: { DOMSubtreeModified: calls.subtreeModifiedCallback } }];
 
-    const compare = (data: any): boolean => {
+    const compare = (data) => {
         if (sessionStorage && sessionStorage.currentDocument) {
             let obj = sessionStorage.currentDocument || {};
             let dom = sessionStorage.currentDocument || {};
@@ -268,7 +238,7 @@ class HashHandler {
             obj = JSON.parse(obj);
             dom = JSON.parse(dom);
 
-            if(!obj || !dom) return true;
+            if (!obj || !dom) return true;
 
             for (let src in data) {
                 if (data[src] != dom[src]) {
@@ -283,29 +253,29 @@ class HashHandler {
     };
 
     //Cache
-    const tmpl = (str: string, data?: any): void => {
+    const tmpl = (str, data) => {
 
-        if (compare(data)) {
-            let dom = new VDom();
+        //if (compare(data)) {
+        let dom = new VDom();
 
-            let dataReplaced: any;
+        let dataReplaced;
 
-            for (let i in data) {
-                let regExpression = new RegExp('{{' + i + '}}');
-                str = str.replace(regExpression, data[i]);
-            }
-
-            dom.body().setHtml(str);
-            sessionStorage.currentDocument = JSON.stringify({ doc: dom, obj: data });
-
-            dom.apply();
-        } else {
-            sessionStorage.currentDocument.doc.apply();
+        for (let i in data) {
+            let regExpression = new RegExp('{{' + i + '}}');
+            str = str.replace(regExpression, data[i]);
         }
+
+        dom.body().setHtml(str);
+        sessionStorage.currentDocument = JSON.stringify({ doc: dom, obj: data });
+
+        dom.apply();
+        /*} else {
+            sessionStorage.currentDocument.doc.apply();
+        }*/
     };
 
-    let current: any = null;
-    const router = (): void => {
+    let current = null;
+    const router = () => {
         // Lazy load view element:
         el = el || document.getElementById('view');
         // Clear existing observer:
@@ -317,14 +287,15 @@ class HashHandler {
         // Get route by url:
         var route = routes[url];
         // Do we have both a view and a route?
-        if (el && route.controller) {
+        if (el && route && route.controller) {
             // Set current route information:
             current = {
                 controller: new route.controller,
-                template: route.templateId, //modificar acá para renderizar la vista
-                render: (): void => {
+                template: route.templateId,
+                render: () => {
                     // Render route template with John Resig's template engine:
                     el.innerHTML = tmpl(route.templateId, new route.controller());
+                    window.history.pushState(url, url);
                 }
             };
             // Render directly:
@@ -332,7 +303,7 @@ class HashHandler {
 
             //Configure watchs
             arrayCallbacks.forEach(event => {
-                el.addEventListener(event.domEvent, (mutationEvent: MutationObserver): void => {
+                el.addEventListener(event.domEvent, (mutationEvent) => {
                     event.callback[event.domEvent](el, mutationEvent);
                 });
             });
@@ -346,15 +317,48 @@ class HashHandler {
     this.route = route;
 })();
 
+HTMLElement.prototype.renderPartial = (url, params) => {
+
+    fetch(url)
+        .then((response) => {
+            return response.blob();
+        })
+        .then((response) => {
+            this.innerHTML = response.data ? response.data : response;
+        }).catch((ex) => {
+            throw ex;
+        });
+};
+
+/*
+setInterval(()=>{
+
+    let currentLocation = window.location.href;
+
+}, 10);
+*/
+
+/*                                                          END CORE                                                                    */
+/****************************************************************************************************************************************/
+
 //Ready
-document.addEventListener('DOMContentLoaded', (): void => {
+document.addEventListener('DOMContentLoaded', () => {
 
     //Set up this document
     let vdom = new VDom();
 
-    vdom.setCallback('DOMNodeInserted', (event: MutationEvent): void => {
+    vdom.setCallback('DOMNodeInserted', (event) => {
         console.log("Agregado", event);
     });
 
-    vdom.body().setHtml(`<h1>TEST</h1>`);
+    vdom.body().setHtml(`<h1>{{pepe}}</h1>`);
+
+    route('/page1', vdom.body().getHtml(), function () {
+        this.pepe = 'Hello world!';
+        this.counter = 0;
+        this.$on('.my-button', 'click', function () {
+            this.counter += 1;
+            this.$refresh();
+        }.bind(this));
+    });
 });

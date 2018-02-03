@@ -1,12 +1,2 @@
-#dependencies
-node_modules
-
-#output
-output/*.js
-output/*.js.map
-
-#package unnecessary
-package-lock.json
-
 #vscode
 .vscode
