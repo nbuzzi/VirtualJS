@@ -456,7 +456,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let homeView = new Template(`
         <h1>{{pepe}}</h1>
         <h2>{{counter}}</h2>
-        <button class="my-button">Increment</button>`);
+        <button class="my-button btn btn-primary btn-sm">Increment</button>
+        <a href="file:///C:/Users/NicolasBuzzi/Desktop/f/index.html" class="btn btn-warning btn-sm">Back to Home</button>`);
 
     //Set up this document
     let vdom = new VDom(homeView, {
