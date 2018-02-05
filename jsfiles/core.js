@@ -252,20 +252,71 @@ class HashHandler {
         return true;
     };
 
+    const isObject = (obj) => {
+        return typeof (obj) == 'object' && !(obj.length) ? true : false;
+    };
+
+    const replacerObject = (source, data, proper, firstProp) => {
+        let stringReplaced = source;
+        let regex = undefined;
+
+        regex = new RegExp(`{{${proper}.${firstProp}}}`, 'g');
+        let parent = `{{)([aA-zZ]{0,}`;
+
+        if (!source.match(regex)) {
+            regex = new RegExp(`(${parent}).(${proper}).(${firstProp})(}})`, 'g');
+
+            let tries = 20;
+            while (!source.match(regex)) {
+                current = `(${parent}).(${parent}).(${proper}).(${firstProp})(}})`
+                regex = new RegExp(current, 'g');
+
+                current += `(${parent}).`;
+                tries--;
+
+                if (tries <= 1) break;
+            }
+        }
+
+        stringReplaced = stringReplaced.replace(regex, data[firstProp]);
+
+        return stringReplaced;
+    };
+
+    const replaceCode = (str, data, proper = '', subchild = false) => {
+
+        let source = str;
+
+        for (let prop in data) {
+            if (isObject(data[prop])) {
+
+                source = replaceCode(source, data[prop], prop, true);
+            } else if (subchild) {
+                let regex = undefined;
+
+                regex = new RegExp(`{{${proper}.${prop}}}`, 'g');
+                if (!source.match(regex)) {
+                    source = replacerObject(source, data, proper, prop);
+                } else {
+                    source = source.replace(regex, data[prop]);
+                }
+            } else {
+                let regex = new RegExp(`{{${prop}}}`, 'g');
+                source = source.replace(regex, data[prop]);
+            }
+        }
+
+        return source;
+    };
+
     //Cache
     const tmpl = (str, data) => {
 
         //if (compare(data)) {
         let dom = new VDom();
 
-        let dataReplaced;
-
-        for (let i in data) {
-            let regExpression = new RegExp('{{' + i + '}}');
-            str = str.replace(regExpression, data[i]);
-        }
-
-        dom.body().setHtml(str);
+        let dataReplaced = replaceCode(str, data);
+        dom.body().setHtml(dataReplaced);
         sessionStorage.currentDocument = JSON.stringify({ doc: dom, obj: data });
 
         dom.apply();
@@ -343,6 +394,25 @@ setInterval(()=>{
 
 //Ready
 document.addEventListener('DOMContentLoaded', () => {
+
+    var template = `
+        <h1>{{message}}</h1>
+        <h2>{{person.name}}</h2>
+        <h3>{{person.datos.ages}}</h3>
+        <h4>{{gender}}</h4>
+        <h5>{{person.datos.born}}</h5>`;
+
+    route('/page2', template, function() {
+        this.message = 'Hello',
+        this.person = {
+            name: 'Nicolas',
+            datos: {
+                ages: 18,
+                born: 'December'
+            }
+        },
+        this.gender = 'male'
+    });
 
     //Set up this document
     let vdom = new VDom();
