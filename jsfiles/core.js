@@ -2,6 +2,8 @@
 
 /*                                                          CORE                                                                        */
 /****************************************************************************************************************************************/
+'use strict';
+
 const configDefault = { attributes: true, childList: true, characterData: true };
 
 var $$ = (query, dom = document) => {
@@ -25,6 +27,7 @@ class VDom {
     constructor(template = ``, format = 'text/html') {
         this._template = template;
         this._format = format;
+        this._events = [];
 
         this.virtual = createDOM(this._template, this._format);
 
@@ -46,7 +49,16 @@ class VDom {
 
             },
             nodeInsertedCallback: (event) => {
+                for (let i in this._events) {
+                    let eventHand = this._events[i];
 
+                    let element = this.virtual.querySelector(eventHand.selector);
+                    if (element) {
+                        element.addEventListener(eventHand.event, function (eventHandler) {
+                            eventHand.action(eventHandler);
+                        });
+                    }
+                }
             },
             nodeRemovedCallback: (event) => {
 
@@ -82,6 +94,14 @@ class VDom {
         }
     }
 
+    setActionCallback(selector, event, action) {
+        if (this.virtual) {
+            this._events.push({ selector: selector, event: event, action: action });
+        }
+
+        return true;
+    }
+
     apply() {
         document.body.innerHTML = this.virtual.body.innerHTML;
 
@@ -108,6 +128,34 @@ class VDom {
         return;
     }
 
+    getElementById(id) {
+        return this.virtual.getElementById(id);
+    }
+
+    getElementByQuery(query) {
+        return this.virtual.querySelector(query);
+    }
+
+    getElementByTagName(tagName) {
+        return this.virtual.getElementByTagName(tagName);
+    }
+
+    getElementsByTagName(tagName) {
+        return this.virtual.getElementsByTagName(tagName);
+    }
+
+    getElementsByQuery(query) {
+        return this.virtual.querySelectorAll(query);
+    }
+
+    setVar(varName, obj) {
+        document[varName] = obj;
+    }
+
+    getVar(varName) {
+        return document[varName];
+    }
+
     body() {
 
         let body = this.virtual.body;
@@ -124,39 +172,37 @@ class VDom {
 
         return body;
     }
-}
 
-//TEST para route
-class HashHandler {
-    constructor() {
-        this.oldHash = window.location.hash;
-        this.Check;
-    }
+    head() {
 
-    detect() {
-        if (this.oldHash != window.location.hash) {
-            alert("HASH CHANGED - new has" + window.location.hash);
-            this.oldHash = window.location.hash;
-        }
+        let head = this.virtual.head;
+
+        head.setHtml = (stringTemplate) => {
+            head.innerHTML = stringTemplate;
+
+            return;
+        };
+
+        head.getHtml = () => {
+            return head.innerHTML;
+        };
+
+        return head;
     }
 }
 
 (() => {
-    // A hash to store our routes:
+    //Clear sessionStorage
+    sessionStorage.clear();
+
+    //Routes
     let routes = {};
+
     // An array of the current route's events:
     let events = [];
     // The element where the routes are rendered:
+
     let el = null;
-    // Context functions shared between all controllers:
-    let ctx = {
-        on: (selector, evt, handler) => {
-            events.push([selector, evt, handler]);
-        },
-        refresh: (listeners) => {
-            listeners.forEach((fn) => { fn(); });
-        }
-    };
 
     // Defines a route:
     let route = (path, templateId, controller) => {
@@ -165,28 +211,7 @@ class HashHandler {
             templateId = null;
         }
 
-        let listeners = [];
-        Object.defineProperty(controller.prototype, '$on', { value: ctx.on });
-        Object.defineProperty(controller.prototype, '$refresh', { value: ctx.refresh.bind(undefined, listeners) });
-
-        routes[path] = { templateId: templateId, controller: controller, onRefresh: listeners.push.bind(listeners) };
-    };
-
-    const forEachEventElement = (fnName) => {
-        for (let i = 0, len = events.length; i < len; i++) {
-            let els = el.querySelectorAll(events[i][0]);
-            for (let j = 0, elsLen = els.length; j < elsLen; j++) {
-                els[j][fnName].apply(els[j], events[i].slice(1));
-            }
-        }
-    };
-
-    const addEventListeners = () => {
-        forEachEventElement('addEventListener');
-    };
-
-    const removeEventListeners = () => {
-        forEachEventElement('removeEventListener');
+        routes[path] = { templateId: templateId, controller: controller };
     };
 
     //Watch changes on the View
@@ -229,28 +254,6 @@ class HashHandler {
     { domEvent: 'DOMNodeRemoved', callback: { DOMNodeRemoved: calls.nodeRemovedCallback } },
     { domEvent: 'DOMNodeRemovedFromDocument', callback: { DOMNodeRemovedFromDocument: calls.removedFromDocumentCallback } },
     { domEvent: 'DOMSubtreeModified', callback: { DOMSubtreeModified: calls.subtreeModifiedCallback } }];
-
-    const compare = (data) => {
-        if (sessionStorage && sessionStorage.currentDocument) {
-            let obj = sessionStorage.currentDocument || {};
-            let dom = sessionStorage.currentDocument || {};
-
-            obj = JSON.parse(obj);
-            dom = JSON.parse(dom);
-
-            if (!obj || !dom) return true;
-
-            for (let src in data) {
-                if (data[src] != dom[src]) {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        return true;
-    };
 
     const isObject = (obj) => {
         return typeof (obj) == 'object' && !(obj.length) ? true : false;
@@ -312,17 +315,12 @@ class HashHandler {
     //Cache
     const tmpl = (str, data) => {
 
-        //if (compare(data)) {
         let dom = new VDom();
 
         let dataReplaced = replaceCode(str, data);
         dom.body().setHtml(dataReplaced);
-        sessionStorage.currentDocument = JSON.stringify({ doc: dom, obj: data });
 
         dom.apply();
-        /*} else {
-            sessionStorage.currentDocument.doc.apply();
-        }*/
     };
 
     let current = null;
@@ -344,9 +342,16 @@ class HashHandler {
                 controller: new route.controller,
                 template: route.templateId,
                 render: () => {
-                    // Render route template with John Resig's template engine:
-                    el.innerHTML = tmpl(route.templateId, new route.controller());
-                    window.history.pushState(url, url);
+
+                    let htmlCode = tmpl(route.templateId, new route.controller());
+                    el.innerHTML = htmlCode;
+
+                    let urlSet = url.substring(1);
+                    if (window.location.href.indexOf('file:///') >= 0) {
+                        window.history.pushState({ "html": htmlCode, "pageTitle": urlSet }, "", `#/${urlSet}`);
+                    } else {
+                        window.history.pushState({ "html": htmlCode, "pageTitle": urlSet }, "", urlSet);
+                    }
                 }
             };
             // Render directly:
@@ -366,6 +371,33 @@ class HashHandler {
     this.addEventListener('load', router);
     // Expose the route register function:
     this.route = route;
+
+    //Watch router
+    setInterval(() => {
+
+        let currentLocation = window.location.href;
+
+
+        if (currentLocation.indexOf('#') >= 0) {
+            let view = `/${currentLocation.split('#')[1]}`;
+
+            sessionStorage.current = view;
+
+            if (sessionStorage.previous && sessionStorage.previous != view) {
+                if (routes[view]) {
+                    document.body.innerHTML = tmpl(routes[view].templateId, new routes[view].controller());
+                    sessionStorage.previous = view;
+                } else {
+                    document.body.innerHTML = `<h1>Not Found</h1><br/><p>Sorry but VMDom not found any page to show</p>`;
+                }
+            } else {
+                sessionStorage.previous = view;
+            }
+
+
+        }
+
+    }, 10);
 })();
 
 HTMLElement.prototype.renderPartial = (url, params) => {
@@ -381,14 +413,6 @@ HTMLElement.prototype.renderPartial = (url, params) => {
         });
 };
 
-/*
-setInterval(()=>{
-
-    let currentLocation = window.location.href;
-
-}, 10);
-*/
-
 /*                                                          END CORE                                                                    */
 /****************************************************************************************************************************************/
 
@@ -402,33 +426,35 @@ document.addEventListener('DOMContentLoaded', () => {
         <h4>{{gender}}</h4>
         <h5>{{person.datos.born}}</h5>`;
 
-    route('/page2', template, function() {
+    route('/page2', template, function () {
         this.message = 'Hello',
-        this.person = {
-            name: 'Nicolas',
-            datos: {
-                ages: 18,
-                born: 'December'
-            }
-        },
-        this.gender = 'male'
+            this.person = {
+                name: 'Nicolas',
+                datos: {
+                    ages: 18,
+                    born: 'December'
+                }
+            },
+            this.gender = 'male'
     });
 
     //Set up this document
     let vdom = new VDom();
 
-    vdom.setCallback('DOMNodeInserted', (event) => {
-        console.log("Agregado", event);
-    });
+    vdom.body().setHtml(`
+        <h1>{{pepe}}</h1>
+        <h2>{{counter}}</h2>
+        <button class="my-button">Increment</button>
+    `);
 
-    vdom.body().setHtml(`<h1>{{pepe}}</h1>`);
+    vdom.setActionCallback('.my-button', 'click', (event) => {
+        alert('Bien!');
+    });
 
     route('/page1', vdom.body().getHtml(), function () {
         this.pepe = 'Hello world!';
         this.counter = 0;
-        this.$on('.my-button', 'click', function () {
-            this.counter += 1;
-            this.$refresh();
-        }.bind(this));
     });
+
+
 });
