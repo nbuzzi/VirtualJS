@@ -24,51 +24,52 @@ const applyDocument = (doc) => {
 
 class VDom {
 
-    constructor(template = ``, format = 'text/html') {
+    constructor(template = {}, data = {}, format = 'text/html') {
         this._template = template;
         this._format = format;
         this._events = [];
+        this._data = data;
 
-        this.virtual = createDOM(this._template, this._format);
+        this._events.data = data;
+
+        this.virtual = createDOM(this._template.original, this._format);
 
         this.Callbacks = {
 
             attribModifiedCallback: (event) => {
-
+                
             },
             attribNameChangedCallback: (event) => {
-
+                
             },
             characterDataModifiedCallback: (event) => {
+                $applyChanges();
 
             },
             elementNameChangedCallback: (event) => {
 
             },
             nodeInsertedIntoDocumentCallback: (event) => {
+                $applyChanges();
 
             },
             nodeInsertedCallback: (event) => {
-                for (let i in this._events) {
-                    let eventHand = this._events[i];
+                
 
-                    let element = this.virtual.querySelector(eventHand.selector);
-                    if (element) {
-                        element.addEventListener(eventHand.event, function (eventHandler) {
-                            eventHand.action(eventHandler);
-                        });
-                    }
-                }
             },
             nodeRemovedCallback: (event) => {
-
+                
             },
             removedFromDocumentCallback: (event) => {
+                $applyChanges();
 
             },
             subtreeModifiedCallback: (event) => {
 
             },
+            ready: (event) => {
+
+            }
         };
 
         this.arrayCallbacks = [{ domEvent: 'DOMAttrModified', callback: { DOMAttrModified: this.Callbacks.attribModifiedCallback } },
@@ -79,9 +80,14 @@ class VDom {
         { domEvent: 'DOMNodeInserted', callback: { DOMNodeInserted: this.Callbacks.nodeInsertedCallback } },
         { domEvent: 'DOMNodeRemoved', callback: { DOMNodeRemoved: this.Callbacks.nodeRemovedCallback } },
         { domEvent: 'DOMNodeRemovedFromDocument', callback: { DOMNodeRemovedFromDocument: this.Callbacks.removedFromDocumentCallback } },
-        { domEvent: 'DOMSubtreeModified', callback: { DOMSubtreeModified: this.Callbacks.subtreeModifiedCallback } }];
+        { domEvent: 'DOMSubtreeModified', callback: { DOMSubtreeModified: this.Callbacks.subtreeModifiedCallback } },
+        { domEvent: 'DOMContentLoaded', callback: { DOMContentLoaded: this.Callbacks.ready } }];
 
         this.configureCallback(this.virtual);
+    }
+
+    applyChanges() {
+        $applyChanges();
     }
 
     configureCallback(doc) {
@@ -104,6 +110,18 @@ class VDom {
 
     apply() {
         document.body.innerHTML = this.virtual.body.innerHTML;
+
+        for (let i in this._events) {
+            let item = this._events[i];
+
+            let element = document.querySelector(item.selector);
+            let dataSource = this._data;
+            if (element) {
+                element.addEventListener(item.event, function (eventHandler) {
+                    item.action(eventHandler, dataSource);
+                });
+            }
+        }
 
         return;
     }
@@ -161,7 +179,13 @@ class VDom {
         let body = this.virtual.body;
 
         body.setHtml = (stringTemplate) => {
-            body.innerHTML = stringTemplate;
+            if(stringTemplate && stringTemplate.format){
+                body.innerHTML = stringTemplate.logic;
+            } else if(stringTemplate && stringTemplate.logic) {
+                body.innerHTML = stringTemplate.logic;
+            } else if(typeof(stringTemplate) == 'string'){
+                body.innerHTML = stringTemplate;
+            }
 
             return;
         };
@@ -200,49 +224,53 @@ class VDom {
 
     // An array of the current route's events:
     let events = [];
-    // The element where the routes are rendered:
 
+    // The element where the routes are rendered:
     let el = null;
 
     // Defines a route:
-    let route = (path, templateId, controller) => {
-        if (typeof templateId === 'function') {
-            controller = templateId;
-            templateId = null;
-        }
-
-        routes[path] = { templateId: templateId, controller: controller };
+    let route = (path, templateId) => {
+        routes[path] = { templateId: templateId };
     };
 
     //Watch changes on the View
     const calls = {
         attribModifiedCallback: (element, event) => {
+            
 
         },
         attribNameChangedCallback: (element, event) => {
+           
 
         },
         characterDataModifiedCallback: (element, event) => {
+            
 
         },
         elementNameChangedCallback: (element, event) => {
+            
 
         },
         nodeInsertedIntoDocumentCallback: (element, event) => {
+            
 
         },
         nodeInsertedCallback: (element, event) => {
+            
 
         },
         nodeRemovedCallback: (element, event) => {
+            
 
         },
         removedFromDocumentCallback: (element, event) => {
+            
 
         },
         subtreeModifiedCallback: (element, event) => {
+            
 
-        },
+        }
     };
 
     let arrayCallbacks = [{ domEvent: 'DOMAttrModified', callback: { DOMAttrModified: calls.attribModifiedCallback } },
@@ -313,11 +341,10 @@ class VDom {
     };
 
     //Cache
-    const tmpl = (str, data) => {
+    const tmpl = (dom) => {
 
-        let dom = new VDom();
+        let dataReplaced = replaceCode(dom._template.format, dom._data);
 
-        let dataReplaced = replaceCode(str, data);
         dom.body().setHtml(dataReplaced);
 
         dom.apply();
@@ -336,14 +363,14 @@ class VDom {
         // Get route by url:
         var route = routes[url];
         // Do we have both a view and a route?
-        if (el && route && route.controller) {
+        if (el && route && route.templateId) {
             // Set current route information:
             current = {
-                controller: new route.controller,
+                controller: route.templateId._data,
                 template: route.templateId,
                 render: () => {
 
-                    let htmlCode = tmpl(route.templateId, new route.controller());
+                    let htmlCode = tmpl(route.templateId);
                     el.innerHTML = htmlCode;
 
                     let urlSet = url.substring(1);
@@ -371,21 +398,21 @@ class VDom {
     this.addEventListener('load', router);
     // Expose the route register function:
     this.route = route;
+    this.$applyChanges = router;
 
     //Watch router
     setInterval(() => {
 
         let currentLocation = window.location.href;
 
-
         if (currentLocation.indexOf('#') >= 0) {
-            let view = `/${currentLocation.split('#')[1]}`;
+            let view = `${currentLocation.split('#')[1]}`;
 
             sessionStorage.current = view;
 
             if (sessionStorage.previous && sessionStorage.previous != view) {
                 if (routes[view]) {
-                    document.body.innerHTML = tmpl(routes[view].templateId, new routes[view].controller());
+                    tmpl(routes[view].templateId);
                     sessionStorage.previous = view;
                 } else {
                     document.body.innerHTML = `<h1>Not Found</h1><br/><p>Sorry but VMDom not found any page to show</p>`;
@@ -397,8 +424,15 @@ class VDom {
 
         }
 
-    }, 10);
+    }, 1000);
 })();
+
+class Template {
+    constructor(stringCode){
+        this.format = stringCode;
+        this.logic = stringCode;
+    }
+}
 
 HTMLElement.prototype.renderPartial = (url, params) => {
 
@@ -419,42 +453,25 @@ HTMLElement.prototype.renderPartial = (url, params) => {
 //Ready
 document.addEventListener('DOMContentLoaded', () => {
 
-    var template = `
-        <h1>{{message}}</h1>
-        <h2>{{person.name}}</h2>
-        <h3>{{person.datos.ages}}</h3>
-        <h4>{{gender}}</h4>
-        <h5>{{person.datos.born}}</h5>`;
-
-    route('/page2', template, function () {
-        this.message = 'Hello',
-            this.person = {
-                name: 'Nicolas',
-                datos: {
-                    ages: 18,
-                    born: 'December'
-                }
-            },
-            this.gender = 'male'
-    });
-
-    //Set up this document
-    let vdom = new VDom();
-
-    vdom.body().setHtml(`
+    let homeView = new Template(`
         <h1>{{pepe}}</h1>
         <h2>{{counter}}</h2>
-        <button class="my-button">Increment</button>
-    `);
+        <button class="my-button">Increment</button>`);
 
-    vdom.setActionCallback('.my-button', 'click', (event) => {
-        alert('Bien!');
+    //Set up this document
+    let vdom = new VDom(homeView, {
+        pepe: 'Hello world!',
+        counter: 0
     });
 
-    route('/page1', vdom.body().getHtml(), function () {
-        this.pepe = 'Hello world!';
-        this.counter = 0;
+    vdom.body().setHtml(homeView);
+
+    vdom.setActionCallback('.my-button', 'click', (event, data) => {
+        data.counter++;
+
+        vdom.applyChanges();
     });
 
+    route('/page1', vdom);
 
 });
