@@ -440,7 +440,7 @@ class VDom {
     setInterval(() => {
 
         let currentLocation = window.location.href, view = '';
-        let notFoundCode = `<h1>Not Found</h1><br/><p>Sorry but VMDom not found any page to show</p>`;
+        let notFoundCode = `<h1>Not Found</h1><br/><p>I'm sorry but VMDom has not found a page to show</p>`;
 
         if (currentLocation.indexOf('#') >= 0) {
             view = `${currentLocation.split('#')[1]}`;
