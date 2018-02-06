@@ -6,3 +6,30 @@
 <h2>{{counter}}</h2>
 <button class="my-button btn btn-primary btn-sm">Increment</button>
 <a href="/" class="btn btn-warning btn-sm">Back to Home</a>
+
+<table class="table">
+    <thead class="thead-inverse">
+        <tr>
+            <th>
+                Name
+            </th>
+            <th>
+                Ages
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr vdom-repeat="item in list">
+            <td>{{item.name}}</td>
+            <td>{{item.age}}</td>
+        </tr>
+        <tr>
+            <td>{{item.name}}</td>
+            <td>{{item.age}}</td>
+        </tr>
+        <tr>
+            <td>{{item.name}}</td>
+            <td>{{item.age}}</td>
+        </tr>
+    </tbody>
+</table>

@@ -341,14 +341,19 @@ class VDom {
         return stringReplaced;
     };
 
-    const replaceCode = (str, data, proper = '', subchild = false) => {
+    const replaceCode = (str, data, proper = '', subchild = false, applied = false) => {
 
         let source = str;
+
+        //Esta en mejora todavía, no funciona bien.
+        if (!applied) {
+            source = applyLogic(str, new DOMParser().parseFromString(str, 'text/html'), data);
+        }
 
         for (let prop in data) {
             if (isObject(data[prop])) {
 
-                source = replaceCode(source, data[prop], prop, true);
+                source = replaceCode(source, data[prop], prop, true, true);
             } else if (subchild) {
                 let regex = undefined;
 
@@ -361,6 +366,62 @@ class VDom {
             } else {
                 let regex = new RegExp(`{{${prop}}}`, 'g');
                 source = source.replace(regex, data[prop]);
+            }
+        }
+
+        return source;
+    };
+
+    const getAttribute = (element, attributeName) => {
+        if (element && element.attributes) {
+            for (let i in element.attributes) {
+                if (element.attributes[i].name == attributeName) {
+                    return element.attributes[i].value;
+                }
+            }
+        }
+    };
+
+    const replaceCodeByLogic = (str, data, obj) => {
+        let source = str;
+        let prop = '([aA-zZ]+)';
+        let regex = new RegExp(`{{${obj.iterator}.${prop}}}`, 'g');
+
+        let match = source.match(regex);
+        if (match) {
+            for (let i in match) {
+                if (typeof (match[i]) == 'function') break;
+                let propName = match[i].split ? match[i].split(".")[1].split("}}")[0] : null;
+
+                if (propName == null) break;
+
+                for (let e in data) {
+                    if (typeof (data[e]) == 'function') break;
+                    source = source.replace(new RegExp(match[i]), data[e][propName]);
+                }
+            }
+        }
+
+        return source;
+    };
+
+    const applyLogic = (str, doc, data) => {
+        let logicList = doc.querySelectorAll('[vdom-repeat]');
+        let source = str;
+
+        if (logicList && logicList.length) {
+            for (let i in logicList) {
+                let element = logicList[i];
+                if (!element instanceof HTMLElement || typeof(element) == 'number') break;
+
+                let attribute = getAttribute(element, 'vdom-repeat').split(' ');
+
+                let iterator = attribute[0];
+                let list = attribute[attribute.length - 1];
+
+                if (data[list]) {
+                    source = replaceCodeByLogic(source, data[list], { iterator: iterator, data: list });
+                }
             }
         }
 
@@ -471,7 +532,15 @@ class VDom {
                     tmpl(routes[view].templateId);
                     sessionStorage.previous = view;
                     sessionStorage.rendered = true;
-                } else if (last != "" && routes[view] == null ) {
+
+                    if (window.location.href.indexOf('aspxerrorpath') >= 0) {
+                        window.history.pushState({ "html": document.documentElement.innerHTML, "pageTitle": view.substring(1) }, "", view);
+                    }
+                } else if (last != "" && routes[view] == null) {
+                    if (window.location.href.indexOf('notfound') >= 0) {
+                        return;
+                    }
+
                     document.body.innerHTML = notFoundCode;
                     sessionStorage.rendered = false;
                     window.history.pushState({ "html": notFoundCode, "pageTitle": 'notfound' }, "", '/notfound');
@@ -534,6 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let controller = {
             pepe: 'Hello world!',
             counter: 0,
+            list: [{ name: 'Test', age: 15 }, { name: 'Otro', age: 18 }, { name: 'More', age: 23 }]
         };
 
         //Set up this document
