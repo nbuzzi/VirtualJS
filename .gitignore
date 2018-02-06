@@ -1,2 +1,9 @@
 #vscode
 .vscode
+
+#packages
+packages
+
+#releases
+VirtualDOM/bin
+VirtualDOM/obj

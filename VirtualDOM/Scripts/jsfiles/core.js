@@ -1,10 +1,20 @@
-/****************************************************************************************************************************************/
+﻿/****************************************************************************************************************************************/
 
 /*                                                          CORE                                                                        */
 /****************************************************************************************************************************************/
 'use strict';
 
 const configDefault = { attributes: true, childList: true, characterData: true };
+sessionStorage.rendered = false;
+
+//Time to check URL's
+let timeToCheck = 500;
+
+//Default configuration to MVC
+let defaultControllerMVC = {
+    controller: 'Home',
+    action: 'Index'
+};
 
 var $$ = (query, dom = document) => {
     return dom.querySelectorAll(query);
@@ -37,10 +47,10 @@ class VDom {
         this.Callbacks = {
 
             attribModifiedCallback: (event) => {
-                
+
             },
             attribNameChangedCallback: (event) => {
-                
+
             },
             characterDataModifiedCallback: (event) => {
                 $applyChanges();
@@ -54,11 +64,11 @@ class VDom {
 
             },
             nodeInsertedCallback: (event) => {
-                
+
 
             },
             nodeRemovedCallback: (event) => {
-                
+
             },
             removedFromDocumentCallback: (event) => {
                 $applyChanges();
@@ -119,6 +129,7 @@ class VDom {
             if (element) {
                 element.addEventListener(item.event, function (eventHandler) {
                     item.action(eventHandler, dataSource);
+                    $applyChanges();
                 });
             }
         }
@@ -179,11 +190,11 @@ class VDom {
         let body = this.virtual.body;
 
         body.setHtml = (stringTemplate) => {
-            if(stringTemplate && stringTemplate.format){
+            if (stringTemplate && stringTemplate.format) {
                 body.innerHTML = stringTemplate.logic;
-            } else if(stringTemplate && stringTemplate.logic) {
+            } else if (stringTemplate && stringTemplate.logic) {
                 body.innerHTML = stringTemplate.logic;
-            } else if(typeof(stringTemplate) == 'string'){
+            } else if (typeof (stringTemplate) == 'string') {
                 body.innerHTML = stringTemplate;
             }
 
@@ -195,6 +206,18 @@ class VDom {
         };
 
         return body;
+    }
+
+    render(stringTemplate) {
+
+        let docum = this.virtual.write;
+        if (stringTemplate && stringTemplate.format) {
+            docum.innerHTML = stringTemplate.logic;
+        } else if (stringTemplate && stringTemplate.logic) {
+            docum.innerHTML = stringTemplate.logic;
+        } else if (typeof (stringTemplate) == 'string') {
+            docum.innerHTML = stringTemplate;
+        }
     }
 
     head() {
@@ -212,6 +235,10 @@ class VDom {
         };
 
         return head;
+    }
+
+    addToRouter(routeToAdd) {
+        route(routeToAdd, this);
     }
 }
 
@@ -236,39 +263,39 @@ class VDom {
     //Watch changes on the View
     const calls = {
         attribModifiedCallback: (element, event) => {
-            
+
 
         },
         attribNameChangedCallback: (element, event) => {
-           
+
 
         },
         characterDataModifiedCallback: (element, event) => {
-            
+
 
         },
         elementNameChangedCallback: (element, event) => {
-            
+
 
         },
         nodeInsertedIntoDocumentCallback: (element, event) => {
-            
+
 
         },
         nodeInsertedCallback: (element, event) => {
-            
+
 
         },
         nodeRemovedCallback: (element, event) => {
-            
+
 
         },
         removedFromDocumentCallback: (element, event) => {
-            
+
 
         },
         subtreeModifiedCallback: (element, event) => {
-            
+
 
         }
     };
@@ -362,6 +389,15 @@ class VDom {
         var url = location.hash.slice(1) || '/';
         // Get route by url:
         var route = routes[url];
+        if ((!route) && routes) {
+            let routersList = window.location.href.split('/');
+
+            let last = routersList[routersList.length - 1];
+            if (last == "") return;
+
+            route = routes['/' + last];
+        }
+
         // Do we have both a view and a route?
         if (el && route && route.templateId) {
             // Set current route information:
@@ -403,10 +439,11 @@ class VDom {
     //Watch router
     setInterval(() => {
 
-        let currentLocation = window.location.href;
+        let currentLocation = window.location.href, view = '';
+        let notFoundCode = `<h1>Not Found</h1><br/><p>Sorry but VMDom not found any page to show</p>`;
 
         if (currentLocation.indexOf('#') >= 0) {
-            let view = `${currentLocation.split('#')[1]}`;
+            view = `${currentLocation.split('#')[1]}`;
 
             sessionStorage.current = view;
 
@@ -415,22 +452,53 @@ class VDom {
                     tmpl(routes[view].templateId);
                     sessionStorage.previous = view;
                 } else {
-                    document.body.innerHTML = `<h1>Not Found</h1><br/><p>Sorry but VMDom not found any page to show</p>`;
+                    document.body.innerHTML = notFoundCode;
                 }
             } else {
                 sessionStorage.previous = view;
             }
 
 
+        } else {
+            if (currentLocation.indexOf('/') >= 0) {
+                let contentPath = currentLocation.split('/');
+                let last = contentPath.lastOrDefault();
+                view = `/${last}`;
+
+                sessionStorage.current = view;
+
+                if (routes[view] && !sessionStorage.rendered) {
+                    tmpl(routes[view].templateId);
+                    sessionStorage.previous = view;
+                    sessionStorage.rendered = true;
+                } else if (last != "" && routes[view] == null ) {
+                    document.body.innerHTML = notFoundCode;
+                    sessionStorage.rendered = false;
+                    window.history.pushState({ "html": notFoundCode, "pageTitle": 'notfound' }, "", '/notfound');
+                }
+
+            }
         }
 
-    }, 1000);
+    }, timeToCheck);
 })();
 
 class Template {
-    constructor(stringCode){
+    constructor(stringCode) {
         this.format = stringCode;
         this.logic = stringCode;
+    }
+
+    load(url) {
+        return fetch(url)
+            .then((response) => {
+                return response.text();
+            })
+            .then((response) => {
+                this.format = response.data ? response.data : response;
+            }).catch((ex) => {
+                throw ex;
+            });
     }
 }
 
@@ -438,7 +506,7 @@ HTMLElement.prototype.renderPartial = (url, params) => {
 
     fetch(url)
         .then((response) => {
-            return response.blob();
+            return response.text();
         })
         .then((response) => {
             this.innerHTML = response.data ? response.data : response;
@@ -447,32 +515,35 @@ HTMLElement.prototype.renderPartial = (url, params) => {
         });
 };
 
+const doPromise = (funct) => {
+    return new Promise((resolve, reject) => {
+        doPromise({ resolve: resolve, reject: reject });
+    });
+};
+
 /*                                                          END CORE                                                                    */
 /****************************************************************************************************************************************/
 
 //Ready
 document.addEventListener('DOMContentLoaded', () => {
 
-    let homeView = new Template(`
-        <h1>{{pepe}}</h1>
-        <h2>{{counter}}</h2>
-        <button class="my-button btn btn-primary btn-sm">Increment</button>
-        <a href="file:///C:/Users/NicolasBuzzi/Desktop/f/index.html" class="btn btn-warning btn-sm">Back to Home</button>`);
+    let homeView = new Template();
+    homeView.load('/Home/Counter').then(() => {
 
-    //Set up this document
-    let vdom = new VDom(homeView, {
-        pepe: 'Hello world!',
-        counter: 0
+        //Model
+        let controller = {
+            pepe: 'Hello world!',
+            counter: 0,
+        };
+
+        //Set up this document
+        let vdom = new VDom(homeView, controller);
+
+        vdom.setActionCallback('.my-button', 'click', (event, data) => {
+            data.counter++;
+        });
+
+        vdom.addToRouter('/page1');
+
     });
-
-    vdom.body().setHtml(homeView);
-
-    vdom.setActionCallback('.my-button', 'click', (event, data) => {
-        data.counter++;
-
-        vdom.applyChanges();
-    });
-
-    route('/page1', vdom);
-
 });

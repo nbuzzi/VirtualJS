@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 var jLinq = (function () {
 
@@ -260,7 +260,7 @@ var jLinq = (function () {
     };
 
 
-    
+
     /**
      * Repeat it on NodeList
      */
