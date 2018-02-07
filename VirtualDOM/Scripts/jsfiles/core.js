@@ -412,7 +412,7 @@ class VDom {
     const replaceFinal = (str, data, pattern) => {
 
         let source = str;
-        let match = str.match(pattern);
+        let match = source.match(pattern);
 
         if (match) {
             source = source.replace(pattern, data);
@@ -442,16 +442,24 @@ class VDom {
                         codeElement += elementCode;
                     }
 
-                    pattern = new RegExp(codeElement, 'g');
+                    let patternCode = codeElement.split ? codeElement.split('<tr>')[1].split('</tr>').firstOrDefault() : '';
+                    let finPatternCode = `<tr vdom-repeat="${iterator} in ${list}">${patternCode}</tr>`;
+
+                    finPatternCode = finPatternCode.replace(/[\n\r]+|([ ]+)/g, '#');
+                    pattern = new RegExp(finPatternCode, 'g');
 
                     codeElement = replaceCodeByLogic(codeElement, data[list], { iterator: iterator, data: list });
+                    let replacedSpaces = source.replace(/[\n\r]+|([ ]+)/g, '#');
+                    let preSource = replaceFinal(replacedSpaces, codeElement, pattern);
 
-                    source = replaceFinal(source, codeElement, pattern);
+                    preSource = preSource.replace(new RegExp("[#]+", "g"), " ");
+
+                    source = replaceFinal(replacedSpaces, codeElement, pattern);
                 }
             }
         }
 
-        return source;
+        return source.replace(new RegExp("[#]+", "g"), " ");
     };
 
     //Cache
