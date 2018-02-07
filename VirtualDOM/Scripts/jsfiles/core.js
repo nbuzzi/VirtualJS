@@ -382,6 +382,10 @@ class VDom {
         }
     };
 
+    const isFunction = (obj) => {
+        return typeof (obj) == 'function' ? true : false;
+    };
+
     const replaceCodeByLogic = (str, data, obj) => {
         let source = str;
         let prop = '([aA-zZ]+)';
@@ -390,13 +394,13 @@ class VDom {
         let match = source.match(regex);
         if (match) {
             for (let i in match) {
-                if (typeof (match[i]) == 'function') break;
+                if (isFunction(match[i])) break;
                 let propName = match[i].split ? match[i].split(".")[1].split("}}")[0] : null;
 
                 if (propName == null) break;
 
                 for (let e in data) {
-                    if (typeof (data[e]) == 'function') break;
+                    if (isFunction(data[e])) break;
                     source = source.replace(new RegExp(match[i]), data[e][propName]);
                 }
             }
@@ -405,9 +409,21 @@ class VDom {
         return source;
     };
 
+    const replaceFinal = (str, data, pattern) => {
+
+        let source = str;
+        let match = str.match(pattern);
+
+        if (match) {
+            source = source.replace(pattern, data);
+        }
+
+        return source;
+    };
+
     const applyLogic = (str, doc, data) => {
         let logicList = doc.querySelectorAll('[vdom-repeat]');
-        let source = str;
+        let source = str, codeElement = '', pattern = ``;
 
         if (logicList && logicList.length) {
             for (let i in logicList) {
@@ -419,8 +435,18 @@ class VDom {
                 let iterator = attribute[0];
                 let list = attribute[attribute.length - 1];
 
+                let elementCode = `<tr>${element.innerHTML}</tr>`;
+
                 if (data[list]) {
-                    source = replaceCodeByLogic(source, data[list], { iterator: iterator, data: list });
+                    for (let inc = 0; inc < data[list].length; inc++) {
+                        codeElement += elementCode;
+                    }
+
+                    pattern = new RegExp(codeElement, 'g');
+
+                    codeElement = replaceCodeByLogic(codeElement, data[list], { iterator: iterator, data: list });
+
+                    source = replaceFinal(source, codeElement, pattern);
                 }
             }
         }
@@ -442,12 +468,15 @@ class VDom {
     const router = () => {
         // Lazy load view element:
         el = el || document.getElementById('view');
+
         // Clear existing observer:
         if (current) {
             current = null;
         }
+
         // Current route url (getting rid of '#' in hash as well):
         var url = location.hash.slice(1) || '/';
+
         // Get route by url:
         var route = routes[url];
         if ((!route) && routes) {
@@ -459,7 +488,6 @@ class VDom {
             route = routes['/' + last];
         }
 
-        // Do we have both a view and a route?
         if (el && route && route.templateId) {
             // Set current route information:
             current = {
@@ -592,28 +620,3 @@ const doPromise = (funct) => {
 
 /*                                                          END CORE                                                                    */
 /****************************************************************************************************************************************/
-
-//Ready
-document.addEventListener('DOMContentLoaded', () => {
-
-    let homeView = new Template();
-    homeView.load('/Home/Counter').then(() => {
-
-        //Model
-        let controller = {
-            pepe: 'Hello world!',
-            counter: 0,
-            list: [{ name: 'Test', age: 15 }, { name: 'Otro', age: 18 }, { name: 'More', age: 23 }]
-        };
-
-        //Set up this document
-        let vdom = new VDom(homeView, controller);
-
-        vdom.setActionCallback('.my-button', 'click', (event, data) => {
-            data.counter++;
-        });
-
-        vdom.addToRouter('/page1');
-
-    });
-});

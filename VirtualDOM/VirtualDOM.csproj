@@ -94,6 +94,7 @@
     <Content Include="Content\bootstrap.min.css" />
     <Content Include="Content\Site.css" />
     <Content Include="Global.asax" />
+    <Content Include="Scripts\jsfiles\app.js" />
     <Content Include="Scripts\jsfiles\core.js" />
     <Content Include="Scripts\jsfiles\jLinq.js" />
     <Content Include="Web.config" />
