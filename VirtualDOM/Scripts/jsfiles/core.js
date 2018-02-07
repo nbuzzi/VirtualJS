@@ -423,27 +423,31 @@ class VDom {
 
     const applyLogic = (str, doc, data) => {
         let logicList = doc.querySelectorAll('[vdom-repeat]');
-        let source = str, codeElement = '', pattern = ``;
+        let source = str, codeElement = '', pattern = ``, tagName = '';
+        let spacesRegex = new RegExp("[#]+", "g");
 
         if (logicList && logicList.length) {
             for (let i in logicList) {
+                codeElement = '';
                 let element = logicList[i];
-                if (!element instanceof HTMLElement || typeof(element) == 'number') break;
+                if (!element instanceof HTMLElement || typeof (element) == 'number') break;
+
+                tagName = element.tagName.toLowerCase();
 
                 let attribute = getAttribute(element, 'vdom-repeat').split(' ');
 
                 let iterator = attribute[0];
                 let list = attribute[attribute.length - 1];
 
-                let elementCode = `<tr>${element.innerHTML}</tr>`;
+                let elementCode = `<${tagName}>${element.innerHTML}</${tagName}>`;
 
                 if (data[list]) {
                     for (let inc = 0; inc < data[list].length; inc++) {
                         codeElement += elementCode;
                     }
 
-                    let patternCode = codeElement.split ? codeElement.split('<tr>')[1].split('</tr>').firstOrDefault() : '';
-                    let finPatternCode = `<tr vdom-repeat="${iterator} in ${list}">${patternCode}</tr>`;
+                    let patternCode = codeElement.split ? codeElement.split(`<${tagName}>`)[1].split(`</${tagName}>`).firstOrDefault() : '';
+                    let finPatternCode = `<${tagName} vdom-repeat=("|')${iterator} in ${list}("|')>${patternCode}</${tagName}>`;
 
                     finPatternCode = finPatternCode.replace(/[\n\r]+|([ ]+)/g, '#');
                     pattern = new RegExp(finPatternCode, 'g');
@@ -459,7 +463,7 @@ class VDom {
             }
         }
 
-        return source.replace(new RegExp("[#]+", "g"), " ");
+        return source.replace(spacesRegex, " ");
     };
 
     //Cache

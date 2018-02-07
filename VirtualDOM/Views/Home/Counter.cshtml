@@ -1,6 +1,23 @@
 ﻿@{
     Layout = null;
 }
+<style>
+    td {
+        color: black !important;
+    }
+
+    th {
+        color: white !important;
+    }
+
+    table {
+        background-color: white !important;
+    }
+
+    .thead-inverse {
+        background-color: black !important;
+    }
+</style>
 
 <div>
     <h1>{{pepe}}</h1>
@@ -25,6 +42,27 @@
             <tr vdom-repeat="item in list">
                 <td>{{item.name}}</td>
                 <td>{{item.age}}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div style="margin-top: 2%;" class="panel">
+    <table class="table">
+        <thead class="thead-inverse">
+            <tr>
+                <th>
+                    Id
+                </th>
+                <th>
+                    Name
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr vdom-repeat='item in users'>
+                <td>{{item.id}}</td>
+                <td>{{item.name}}</td>
             </tr>
         </tbody>
     </table>

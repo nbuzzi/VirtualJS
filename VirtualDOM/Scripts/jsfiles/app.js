@@ -7,7 +7,8 @@
         let controller = {
             pepe: 'Hello world!',
             counter: 0,
-            list: [{ name: 'Test', age: 15 }, { name: 'Otro', age: 18 }, { name: 'More', age: 23 }]
+            list: [{ name: 'Test', age: 15 }, { name: 'Otro', age: 18 }, { name: 'More', age: 23 }],
+            users: [{ id: 1, name: 'xxtestxx' }, { id: 2, name: 'xxpeepexx' }]
         };
 
         //Set up this document
