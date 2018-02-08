@@ -422,9 +422,72 @@ class VDom {
     };
 
     const applyLogic = (str, doc, data) => {
-        let logicList = doc.querySelectorAll('[vdom-repeat]');
         let source = str, codeElement = '', pattern = ``, tagName = '';
         let spacesRegex = new RegExp("[#]+", "g");
+
+        let logicList = doc.querySelectorAll('[vdom-if]');
+
+        if (logicList && logicList.length) {
+            for (let i in logicList) {
+                codeElement = '';
+                let element = logicList[i];
+                if (!element instanceof HTMLElement || typeof (element) == 'number') break;
+
+                tagName = element.tagName.toLowerCase();
+
+                let attribute = getAttribute(element, 'vdom-if').split(' ');
+
+                let iterator = attribute[0];
+                let operator = attribute[1];
+                let comparer = attribute[2];
+
+                //Si es una variable en el DOM, le seteamos el valor
+                if (data[iterator]) {
+                    iterator = data[iterator];
+                }
+
+                //Si es una variable en el DOM, le seteamos el valor
+                if (data[comparer]) {
+                    comparer = data[comparer];
+                }
+
+                codeElement = element.innerHTML.replace(/[\n\r]+|([ ]+)/g, '#');
+
+                const replacerIn = (str, data) => {
+                    let source = str;
+                    let finPatternCode = `<${tagName} vdom-repeat=("|')${iterator} ${operator} ${comparer}("|')>${codeElement}</${tagName}>`;
+
+                    finPatternCode = finPatternCode.replace(/[\n\r]+|([ ]+)/g, '#');
+                    pattern = new RegExp(finPatternCode, 'g');
+
+                    codeElement = replaceCodeByLogic(codeElement, data[list], { iterator: iterator, data: list });
+                    let replacedSpaces = source.replace(/[\n\r]+|([ ]+)/g, '#');
+                    let preSource = replaceFinal(replacedSpaces, codeElement, pattern);
+
+                    preSource = preSource.replace(new RegExp("[#]+", "g"), " ");
+
+                    source = replaceFinal(replacedSpaces, codeElement, pattern);
+
+                    return source;
+                }
+
+                switch (operator) {
+                    case ">":
+                        if (iterator > comparer) {
+                            source = replacerIn(source, data);
+                        }
+                        break;
+
+                    case "<":
+                        if (iterator < comparer) {
+
+                        }
+                        break;
+                }
+            }
+        }
+
+        logicList = doc.querySelectorAll('[vdom-repeat]');
 
         if (logicList && logicList.length) {
             for (let i in logicList) {
