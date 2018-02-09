@@ -47,27 +47,6 @@
     </table>
 </div>
 
-<div style="margin-top: 2%;" class="panel">
-    <table class="table">
-        <thead class="thead-inverse">
-            <tr>
-                <th>
-                    Id
-                </th>
-                <th>
-                    Name
-                </th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr vdom-repeat='item in users'>
-                <td>{{item.id}}</td>
-                <td>{{item.name}}</td>
-            </tr>
-        </tbody>
-    </table>
-</div>
-
 <div vdom-if="counter < 10">
     El contador se encuentra actualmente en un numero menor a 10, actual {{counter}}/10
 </div>

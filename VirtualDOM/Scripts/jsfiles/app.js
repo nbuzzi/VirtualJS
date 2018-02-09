@@ -4,7 +4,7 @@
     homeView.load('/Home/Counter').then(() => {
 
         //Model
-        let controller = {
+        let modelController = {
             pepe: 'Hello world!',
             messagePartial: "Hey! i'm a partial view!",
             counter: 0,
@@ -13,7 +13,7 @@
         };
 
         //Set up this document
-        let vdom = new VDom(homeView, controller);
+        let vdom = new VDom(homeView, modelController);
 
         vdom.setActionCallback('.my-button', 'click', (event, data) => {
             data.counter++;
