@@ -362,129 +362,59 @@ class VDom {
         const resolveDirectives = (string, data) => {
 
             let sourc = string;
+            let regx = '';
+            let characters = ['<', '>', '==', '<=', '>=', '!=', '+', '-', '*', '/'];
+            let iterator, operator, comparer, replaceStringCode;
 
             for (let i in directivesMatch) {
                 let dir = directivesMatch[i];
 
-                if (dir == null || !dir.split) break;
+                replaceStringCode = dir;
+                if (dir && dir.replace) {
+                    dir = dir.replace(/{{/g, '').replace(/}}/g, '');
+                }
 
-                dir = dir.split(' ');
+                for (let char in characters) {
+                    if (dir && dir.indexOf && dir.indexOf(characters[char]) >= 0) {
+                        let resul = dir.split(characters[char]);
 
-                let nameIterator = dir.firstOrDefault().replace(/{{/g, '');
-                let nameComparer = dir.lastOrDefault().replace(/}}/g, '');
+                        iterator = resul.firstOrDefault().replace(/( )/g, '');
+                        operator = characters[char];
+                        comparer = resul.lastOrDefault().replace(/( )/g, '');
 
-                let iterator = nameIterator;
-                let operator = dir[1];
-                let comparer = nameComparer;
+                        break;
+                    }
+                }
+
+                if (!operator) sourc;
+
+                let result = '', nameIterator = iterator, nameComparer = comparer;
 
                 if (data[iterator] != null) {
-                    iterator = data[iterator];
+                    iterator = `data["${iterator}"]`;
                 }
 
                 if (data[comparer] != null) {
-                    comparer = data[comparer];
+                    comparer = `data["${comparer}"]`;
                 }
 
-                switch (operator) {
-                    case ">":
-                        regx = new RegExp(`{{${nameIterator} ${operator} ${comparer}}}`, 'g');
+                result = eval(`${iterator} ${operator} ${comparer}`);
 
-                        if (preIterator > preComparer) {
-                            sourc = sourc.replace(regx, 'true');
-                        } else {
-                            sourc = sourc.replace(regx, 'false');
-                        }
-                        break;
+                let finOperator = operator;
+                if (operator == '+' || operator == '/' || operator == '*') finOperator = `\\${operator}`;
 
-                    case "<":
-                        regx = new RegExp(`{{${nameIterator} ${operator} ${comparer}}}`, 'g');
+                regx = new RegExp(`(({{)(${nameIterator})( |)(${finOperator})( |)(${nameComparer})(}}))`, 'g');
 
-                        if (preIterator < preComparer) {
-                            sourc = sourc.replace(regx, 'true');
-                        } else {
-                            sourc = sourc.replace(regx, 'false');
-                        }
-                        break;
-
-                    case "!=":
-                        regx = new RegExp(`{{${nameIterator} ${operator} ${comparer}}}`, 'g');
-
-                        if (preIterator != preComparer) {
-                            sourc = sourc.replace(regx, 'true');
-                        } else {
-                            sourc = sourc.replace(regx, 'false');
-                        }
-                        break;
-
-                    case ">=":
-                        regx = new RegExp(`{{${nameIterator} ${operator} ${comparer}}}`, 'g');
-
-                        if (preIterator >= preComparer) {
-                            sourc = sourc.replace(regx, 'true');
-                        } else {
-                            sourc = sourc.replace(regx, 'false');
-                        }
-                        break;
-
-                    case "<=":
-                        regx = new RegExp(`{{${nameIterator} ${operator} ${comparer}}}`, 'g');
-
-                        if (preIterator <= preComparer) {
-                            sourc = sourc.replace(regx, 'true');
-                        } else {
-                            sourc = sourc.replace(regx, 'false');
-                        }
-                        break;
-
-                    case "==":
-                        regx = new RegExp(`{{${nameIterator} ${operator} ${comparer}}}`, 'g');
-
-                        if (preIterator == preComparer) {
-                            sourc = sourc.replace(regx, 'true');
-                        } else {
-                            sourc = sourc.replace(regx, 'false');
-                        }
-                        break;
-
-                    case "+":
-                        regx = new RegExp(`{{${nameIterator} \\${operator} ${comparer}}}`, 'g');
-
-                        sourc = sourc.replace(regx, parseInt(iterator) + parseInt(comparer));
-
-                        break;
-
-                    case "-":
-                        regx = new RegExp(`{{${nameIterator} ${operator} ${comparer}}}`, 'g');
-
-                        sourc = sourc.replace(regx, parseInt(iterator) - parseInt(comparer));
-
-                        break;
-
-                    case "/":
-                        regx = new RegExp(`{{${nameIterator} \\${operator} ${comparer}}}`, 'g');
-
-                        sourc = sourc.replace(regx, parseInt(iterator) / parseInt(comparer));
-
-                        break;
-
-                    case "*":
-                        regx = new RegExp(`{{${nameIterator} \\${operator} ${comparer}}}`, 'g');
-
-                        sourc = sourc.replace(regx, parseInt(iterator) * parseInt(comparer));
-
-                        break;
-
-                }
+                sourc = sourc.replace(regx, result);
             }
 
             needReplace = true;
             return sourc;
-        }
+        };
 
         //Comenzamos a buscar primero directivas sin resolver
         let patternDirective = /(({{)([aA-zZ]+|[0-9]+)( |)(-|\+|>|<|==|<=|>=|!=|\*|\/)( |)([aA-zZ]+|[0-9]+)(}}))/g;
         let directivesMatch = source.match(patternDirective);
-        let regx = '';
         if (directivesMatch) {
             source = resolveDirectives(source, data);
         }
@@ -590,7 +520,7 @@ class VDom {
     };
 
     const applyLogic = (str, doc, data) => {
-        let source = str, codeElement = '', pattern = ``, tagName = '';
+        let source = str, codeElement = '', pattern = '', tagName = '', iterator = '', operator = '', comparer = '', nameIterator = '', nameComparer = '';
         let spacesRegex = new RegExp("[#]+", "g");
 
         let logicList = doc.querySelectorAll('[vdom-if]');
@@ -603,24 +533,36 @@ class VDom {
 
                 tagName = element.tagName.toLowerCase();
 
-                let attribute = getAttribute(element, 'vdom-if').split(' ');
+                let attribute = getAttribute(element, 'vdom-if');
 
-                let iterator = attribute[0];
-                let operator = attribute[1];
-                let comparer = attribute[2];
+                let characters = ['<', '>', '==', '<=', '>=', '!=', '+', '-', '*', '/'];
+                for (let char in characters) {
+                    if (attribute && attribute.indexOf && attribute.indexOf(characters[char]) >= 0) {
+                        let resul = attribute;
 
-                //Si es una variable en el DOM, le seteamos el valor
-                if (data[iterator] != null) {
-                    iterator = { value: data[iterator], name: iterator };
-                } else {
-                    iterator = { value: iterator, name: undefined };
+                        if (resul && attribute.replace) {
+                            resul = attribute.replace(/( )/g, '').split(characters[char]);
+                        }
+
+                        if (resul && resul.length) {
+                            iterator = resul.firstOrDefault().replace(/( )/g, '');
+                            operator = characters[char];
+                            comparer = resul.lastOrDefault().replace(/( )/g, '');
+
+                            break;
+                        }
+                    }
                 }
 
-                //Si es una variable en el DOM, le seteamos el valor
+                nameIterator = iterator;
+                nameComparer = comparer;
+
+                if (data[iterator] != null) {
+                    iterator = `data["${iterator}"]`;
+                }
+
                 if (data[comparer] != null) {
-                    comparer = { value: data[comparer], name: comparer };
-                } else {
-                    comparer = { value: comparer, name: undefined };
+                    comparer = `data["${comparer}"]`;
                 }
 
                 codeElement = element.innerHTML.replace(/[\n\r]+|([ ]+)/g, '#');
@@ -628,18 +570,7 @@ class VDom {
                 const replacerIn = (str, data, del) => {
                     let source = str;
 
-                    let nameOrValueIterator = iterator.name == undefined ? iterator : iterator.name;
-                    let nameOrValueComparer = comparer.name == undefined ? comparer : comparer.name;
-
-                    if (isObject(nameOrValueIterator)) {
-                        nameOrValueIterator = nameOrValueIterator.value;
-                    }
-
-                    if (isObject(nameOrValueComparer)) {
-                        nameOrValueComparer = nameOrValueComparer.value;
-                    }
-
-                    let finPatternCode = `<${tagName} vdom-if=("|')${nameOrValueIterator} ${operator} ${nameOrValueComparer}("|')>${codeElement}</${tagName}>`;
+                    let finPatternCode = `<${tagName} vdom-if=("|')${attribute}("|')>${codeElement}</${tagName}>`;
 
                     finPatternCode = finPatternCode.replace(/[\n\r]+|([ ]+)/g, '#');
                     pattern = new RegExp(finPatternCode, 'g');
@@ -648,7 +579,7 @@ class VDom {
 
                         //Has logic
                         if (codeElement.match(/(({{)(([aA-zZ]+)|([aA-zZ]+.[aA-zZ]+))(}}))/g)) {
-                            codeElement = replaceCodeByLogic(codeElement, data, { iterator: iterator, data: data });
+                            codeElement = replaceCodeByLogic(codeElement, data, { iterator: nameIterator, data: data });
                         }
 
                         let replacedSpaces = source.replace(/[\n\r]+|([ ]+)/g, '#');
@@ -673,58 +604,12 @@ class VDom {
                     return source;
                 }
 
-                let preIterator = iterator.value;
-                let preComparer = comparer.value;
-
-                switch (operator) {
-                    case ">":
-                        if (preIterator > preComparer) {
-                            source = replacerIn(source, data);
-                        } else {
-                            source = replacerIn(source, data, true);
-                        }
-                        break;
-
-                    case "<":
-                        if (preIterator < preComparer) {
-                            source = replacerIn(source, data);
-                        } else {
-                            source = replacerIn(source, data, true);
-                        }
-                        break;
-
-                    case "!=":
-                        if (preIterator != preComparer) {
-                            source = replacerIn(source, data);
-                        } else {
-                            source = replacerIn(source, data, true);
-                        }
-                        break;
-
-                    case ">=":
-                        if (preIterator >= preComparer) {
-                            source = replacerIn(source, data);
-                        } else {
-                            source = replacerIn(source, data, true);
-                        }
-                        break;
-
-                    case "<=":
-                        if (preIterator <= preComparer) {
-                            source = replacerIn(source, data);
-                        } else {
-                            source = replacerIn(source, data, true);
-                        }
-                        break;
-
-                    case "==":
-                        if (preIterator == preComparer) {
-                            source = replacerIn(source, data);
-                        } else {
-                            source = replacerIn(source, data, true);
-                        }
-                        break;
+                if (eval(`${iterator}${operator}${comparer}`.replace(/( )/g, ''))) {
+                    source = replacerIn(source, data);
+                } else {
+                    source = replacerIn(source, data, true);
                 }
+
             }
         }
 
