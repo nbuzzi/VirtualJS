@@ -19,6 +19,5 @@
         });
 
         vdom.addToRouter('/page1');
-
     });
 });

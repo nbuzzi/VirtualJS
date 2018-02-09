@@ -68,6 +68,10 @@
     </table>
 </div>
 
-<div vdom-if="15 > 11">
-    Hola!!!
+<div vdom-if="counter < 10">
+    El contador se encuentra actualmente en un numero menor a 10, actual {{counter}}/10
+</div>
+
+<div vdom-if="counter >= 10">
+    Se supero el contador, numero actual {{counter}}
 </div>

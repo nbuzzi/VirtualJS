@@ -240,6 +240,19 @@ class VDom {
     addToRouter(routeToAdd) {
         route(routeToAdd, this);
     }
+
+    setProp(prop, value) {
+        if (this[prop]) {
+            this[prop] = value;
+            this.applyChanges();
+        }
+    }
+
+    getProp(prop) {
+        if (this[prop]) {
+            return this[prop];
+        }
+    }
 }
 
 (() => {
@@ -395,13 +408,33 @@ class VDom {
         if (match) {
             for (let i in match) {
                 if (isFunction(match[i])) break;
-                let propName = match[i].split ? match[i].split(".")[1].split("}}")[0] : null;
+                let propName = null;
+
+                if (match[i].split) {
+                    propName = match[i].split(".");
+                    if (propName && propName.length && propName.length <= 1) {
+                        propName = propName.firstOrDefault().replace(/{{/g, '').replace(/}}/g, '');
+                    } else {
+                        propName = propName.lastOrDefault().replace('}}', '');
+                    }
+                }
 
                 if (propName == null) break;
 
                 for (let e in data) {
                     if (isFunction(data[e])) break;
-                    source = source.replace(new RegExp(match[i]), data[e][propName]);
+                    if (data[e][propName]) {
+                        source = source.replace(new RegExp(match[i]), data[e][propName]);
+                    } else if (data[propName]) {
+
+                        let matcher = new RegExp(match[i]);
+
+                        if (source.match(matcher)) {
+                            source = source.replace(matcher, data[propName]);
+                        } else if (source.match('undefined')) {
+                            source = source.replace('undefined', data[propName]);
+                        }
+                    }
                 }
             }
         }
@@ -442,45 +475,110 @@ class VDom {
                 let comparer = attribute[2];
 
                 //Si es una variable en el DOM, le seteamos el valor
-                if (data[iterator]) {
-                    iterator = data[iterator];
+                if (data[iterator] != null) {
+                    iterator = { value: data[iterator], name: iterator };
+                } else {
+                    iterator = { value: iterator, name: undefined };
                 }
 
                 //Si es una variable en el DOM, le seteamos el valor
-                if (data[comparer]) {
-                    comparer = data[comparer];
+                if (data[comparer] != null) {
+                    comparer = { value: data[comparer], name: comparer };
+                } else {
+                    comparer = { value: comparer, name: undefined };
                 }
 
                 codeElement = element.innerHTML.replace(/[\n\r]+|([ ]+)/g, '#');
 
-                const replacerIn = (str, data) => {
+                const replacerIn = (str, data, del) => {
                     let source = str;
-                    let finPatternCode = `<${tagName} vdom-repeat=("|')${iterator} ${operator} ${comparer}("|')>${codeElement}</${tagName}>`;
+
+                    let nameOrValueIterator = iterator.name == undefined ? iterator : iterator.name;
+                    let nameOrValueComparer = comparer.name == undefined ? comparer : comparer.name;
+
+                    if (isObject(nameOrValueIterator)) {
+                        nameOrValueIterator = nameOrValueIterator.value;
+                    }
+
+                    if (isObject(nameOrValueComparer)) {
+                        nameOrValueComparer = nameOrValueComparer.value;
+                    }
+
+                    let finPatternCode = `<${tagName} vdom-if=("|')${nameOrValueIterator} ${operator} ${nameOrValueComparer}("|')>${codeElement}</${tagName}>`;
 
                     finPatternCode = finPatternCode.replace(/[\n\r]+|([ ]+)/g, '#');
                     pattern = new RegExp(finPatternCode, 'g');
 
-                    codeElement = replaceCodeByLogic(codeElement, data[list], { iterator: iterator, data: list });
-                    let replacedSpaces = source.replace(/[\n\r]+|([ ]+)/g, '#');
-                    let preSource = replaceFinal(replacedSpaces, codeElement, pattern);
+                    if (!del) {
 
-                    preSource = preSource.replace(new RegExp("[#]+", "g"), " ");
+                        //Has logic
+                        if (codeElement.match(/(({{)(([aA-zZ]+)|([aA-zZ]+.[aA-zZ]+))(}}))/g)) {
+                            codeElement = replaceCodeByLogic(codeElement, data, { iterator: iterator, data: data });
+                        }
 
-                    source = replaceFinal(replacedSpaces, codeElement, pattern);
+                        let replacedSpaces = source.replace(/[\n\r]+|([ ]+)/g, '#');
+                        let preSource = replaceFinal(replacedSpaces, codeElement, pattern);
+
+                        preSource = preSource.replace(new RegExp("[#]+", "g"), " ");
+
+                        source = replaceFinal(replacedSpaces, codeElement, pattern);
+
+                    } else {
+
+                        source = source.replace(/[\n\r]+|([ ]+)/g, '#');
+
+                        let match = source.replace(/[\n\r]+|([ ]+)/g, '#').match(pattern);
+                        if (match) {
+                            source = source.replace(pattern, '');
+                        }
+
+                        source = source.replace(/[\n\r]+|([ ]+)/g, ' ');
+                    }
 
                     return source;
                 }
 
+                let preIterator = iterator.value;
+                let preComparer = comparer.value;
+
                 switch (operator) {
                     case ">":
-                        if (iterator > comparer) {
+                        if (preIterator > preComparer) {
                             source = replacerIn(source, data);
+                        } else {
+                            source = replacerIn(source, data, true);
                         }
                         break;
 
                     case "<":
-                        if (iterator < comparer) {
+                        if (preIterator < preComparer) {
+                            source = replacerIn(source, data);
+                        } else {
+                            source = replacerIn(source, data, true);
+                        }
+                        break;
 
+                    case "!=":
+                        if (preIterator != preComparer) {
+                            source = replacerIn(source, data);
+                        } else {
+                            source = replacerIn(source, data, true);
+                        }
+                        break;
+
+                    case ">=":
+                        if (preIterator >= preComparer) {
+                            source = replacerIn(source, data);
+                        } else {
+                            source = replacerIn(source, data, true);
+                        }
+                        break;
+
+                    case "<=":
+                        if (preIterator <= preComparer) {
+                            source = replacerIn(source, data);
+                        } else {
+                            source = replacerIn(source, data, true);
                         }
                         break;
                 }
