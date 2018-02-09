@@ -356,11 +356,146 @@ class VDom {
 
     const replaceCode = (str, data, proper = '', subchild = false, applied = false) => {
 
+        let needReplace = false;
         let source = str;
+
+        const resolveDirectives = (string, data) => {
+
+            let sourc = string;
+
+            for (let i in directivesMatch) {
+                let dir = directivesMatch[i];
+
+                if (dir == null || !dir.split) break;
+
+                dir = dir.split(' ');
+
+                let nameIterator = dir.firstOrDefault().replace(/{{/g, '');
+                let nameComparer = dir.lastOrDefault().replace(/}}/g, '');
+
+                let iterator = nameIterator;
+                let operator = dir[1];
+                let comparer = nameComparer;
+
+                if (data[iterator] != null) {
+                    iterator = data[iterator];
+                }
+
+                if (data[comparer] != null) {
+                    comparer = data[comparer];
+                }
+
+                switch (operator) {
+                    case ">":
+                        regx = new RegExp(`{{${nameIterator} ${operator} ${comparer}}}`, 'g');
+
+                        if (preIterator > preComparer) {
+                            sourc = sourc.replace(regx, 'true');
+                        } else {
+                            sourc = sourc.replace(regx, 'false');
+                        }
+                        break;
+
+                    case "<":
+                        regx = new RegExp(`{{${nameIterator} ${operator} ${comparer}}}`, 'g');
+
+                        if (preIterator < preComparer) {
+                            sourc = sourc.replace(regx, 'true');
+                        } else {
+                            sourc = sourc.replace(regx, 'false');
+                        }
+                        break;
+
+                    case "!=":
+                        regx = new RegExp(`{{${nameIterator} ${operator} ${comparer}}}`, 'g');
+
+                        if (preIterator != preComparer) {
+                            sourc = sourc.replace(regx, 'true');
+                        } else {
+                            sourc = sourc.replace(regx, 'false');
+                        }
+                        break;
+
+                    case ">=":
+                        regx = new RegExp(`{{${nameIterator} ${operator} ${comparer}}}`, 'g');
+
+                        if (preIterator >= preComparer) {
+                            sourc = sourc.replace(regx, 'true');
+                        } else {
+                            sourc = sourc.replace(regx, 'false');
+                        }
+                        break;
+
+                    case "<=":
+                        regx = new RegExp(`{{${nameIterator} ${operator} ${comparer}}}`, 'g');
+
+                        if (preIterator <= preComparer) {
+                            sourc = sourc.replace(regx, 'true');
+                        } else {
+                            sourc = sourc.replace(regx, 'false');
+                        }
+                        break;
+
+                    case "==":
+                        regx = new RegExp(`{{${nameIterator} ${operator} ${comparer}}}`, 'g');
+
+                        if (preIterator == preComparer) {
+                            sourc = sourc.replace(regx, 'true');
+                        } else {
+                            sourc = sourc.replace(regx, 'false');
+                        }
+                        break;
+
+                    case "+":
+                        regx = new RegExp(`{{${nameIterator} \\${operator} ${comparer}}}`, 'g');
+
+                        sourc = sourc.replace(regx, parseInt(iterator) + parseInt(comparer));
+
+                        break;
+
+                    case "-":
+                        regx = new RegExp(`{{${nameIterator} ${operator} ${comparer}}}`, 'g');
+
+                        sourc = sourc.replace(regx, parseInt(iterator) - parseInt(comparer));
+
+                        break;
+
+                    case "/":
+                        regx = new RegExp(`{{${nameIterator} \\${operator} ${comparer}}}`, 'g');
+
+                        sourc = sourc.replace(regx, parseInt(iterator) / parseInt(comparer));
+
+                        break;
+
+                    case "*":
+                        regx = new RegExp(`{{${nameIterator} \\${operator} ${comparer}}}`, 'g');
+
+                        sourc = sourc.replace(regx, parseInt(iterator) * parseInt(comparer));
+
+                        break;
+
+                }
+            }
+
+            needReplace = true;
+            return sourc;
+        }
+
+        //Comenzamos a buscar primero directivas sin resolver
+        let patternDirective = /(({{)([aA-zZ]+|[0-9]+)( |)(-|\+|>|<|==|<=|>=|!=|\*|\/)( |)([aA-zZ]+|[0-9]+)(}}))/g;
+        let directivesMatch = source.match(patternDirective);
+        let regx = '';
+        if (directivesMatch) {
+            source = resolveDirectives(source, data);
+        }
 
         //Esta en mejora todavía, no funciona bien.
         if (!applied) {
-            source = applyLogic(str, new DOMParser().parseFromString(str, 'text/html'), data);
+            if (needReplace) {
+                source = applyLogic(source, new DOMParser().parseFromString(source, 'text/html'), data);
+            } else {
+                source = applyLogic(str, new DOMParser().parseFromString(str, 'text/html'), data);
+            }
         }
 
         for (let prop in data) {
@@ -581,6 +716,14 @@ class VDom {
                             source = replacerIn(source, data, true);
                         }
                         break;
+
+                    case "==":
+                        if (preIterator == preComparer) {
+                            source = replacerIn(source, data);
+                        } else {
+                            source = replacerIn(source, data, true);
+                        }
+                        break;
                 }
             }
         }
@@ -624,6 +767,7 @@ class VDom {
                     console.error(`Property ${list} not defined`);
                 }
             }
+
         }
 
         return source.replace(spacesRegex, " ");
@@ -653,7 +797,7 @@ class VDom {
                                 } else {
                                     part.innerHTML = response;
                                 }
-                               
+
                                 dataReplaced = documentToAdd.documentElement.innerHTML;
 
                                 promiseObj.resolve();
