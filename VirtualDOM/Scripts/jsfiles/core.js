@@ -620,6 +620,8 @@ class VDom {
                     preSource = preSource.replace(new RegExp("[#]+", "g"), " ");
 
                     source = replaceFinal(replacedSpaces, codeElement, pattern);
+                } else {
+                    console.error(`Property ${list} not defined`);
                 }
             }
         }
@@ -630,11 +632,52 @@ class VDom {
     //Cache
     const tmpl = (dom) => {
 
-        let dataReplaced = replaceCode(dom._template.format, dom._data);
+        let dataReplaced = '', url = '';
+        let documentToAdd = createDOM(dom._template.format);
+        let partialViews = documentToAdd.querySelectorAll('[vdom-partial]');
+        if (partialViews) {
+            doPromise((promiseObj) => {
+                for (let i in partialViews) {
+                    let part = partialViews[i];
 
-        dom.body().setHtml(dataReplaced);
+                    if (part && part.getAttribute) {
+                        url = part.getAttribute('vdom-partial');
+                    }
 
-        dom.apply();
+                    fetch(url).then((response) => response.text())
+                        .then((response) => {
+                            if (part && part.innerHTML) {
+
+                                if (response.match(/{{/g)) {
+                                    part.innerHTML = replaceCode(response, dom._data);
+                                } else {
+                                    part.innerHTML = response;
+                                }
+                               
+                                dataReplaced = documentToAdd.documentElement.innerHTML;
+
+                                promiseObj.resolve();
+                            }
+                        }).catch((exception) => {
+                            console.error(exception);
+                            promiseObj.reject();
+                        });
+                }
+            }).then(() => {
+                dataReplaced = replaceCode(dataReplaced, dom._data);
+
+                dom.body().setHtml(dataReplaced);
+
+                dom.apply();
+            });
+
+        } else {
+            dataReplaced = replaceCode(dom._template.format, dom._data);
+
+            dom.body().setHtml(dataReplaced);
+
+            dom.apply();
+        }
     };
 
     let current = null;
@@ -734,6 +777,7 @@ class VDom {
                     sessionStorage.previous = view;
                     sessionStorage.rendered = true;
 
+                    //for MVC with ASP configuration
                     if (window.location.href.indexOf('aspxerrorpath') >= 0) {
                         window.history.pushState({ "html": document.documentElement.innerHTML, "pageTitle": view.substring(1) }, "", view);
                     }
@@ -787,7 +831,7 @@ HTMLElement.prototype.renderPartial = (url, params) => {
 
 const doPromise = (funct) => {
     return new Promise((resolve, reject) => {
-        doPromise({ resolve: resolve, reject: reject });
+        funct({ resolve: resolve, reject: reject });
     });
 };
 

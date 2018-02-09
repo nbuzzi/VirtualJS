@@ -6,6 +6,7 @@
         //Model
         let controller = {
             pepe: 'Hello world!',
+            messagePartial: "Hey! i'm a partial view!",
             counter: 0,
             list: [{ name: 'Test', age: 15 }, { name: 'Otro', age: 18 }, { name: 'More', age: 23 }],
             users: [{ id: 1, name: 'xxtestxx' }, { id: 2, name: 'xxpeepexx' }]
